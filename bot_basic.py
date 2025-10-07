@@ -60,28 +60,36 @@ async def ocho(ctx, *, pregunta: str = None):
 
     # Caso 2: pregunta muy corta
     if len(pregunta.split()) <= 2:
-        await ctx.send("Tu pregunta es muy corta 😅, intenta algo más completo como: `#ocho ¿Voy a aprobar el examen?`")
+        await ctx.send("Tu pregunta es muy corta 😅, hazla más larga para poder entender lo que quieres decir")
         return
 
     # Caso 3: no termina con signo de pregunta
     if not pregunta.strip().endswith("?"):
-        await ctx.send("Parece que olvidaste el signo de pregunta ❓ Intenta así: `#ocho ¿Me irá bien?`, o algo parecido.")
+        await ctx.send("Parece que olvidaste el signo de pregunta ❓ al final.")
         return
 
     # Respuesta aleatoria
     await ctx.send(f'🎱 {random.choice(respuestas)}')
 
 @bot.command()
-async def roll(ctx, dice: str):
+async def roll(ctx, dice: str = None):
     """Tira un dado en formato NdN."""
+    if dice is None:
+        await ctx.send("🎲 Debes darme un formato NdN, por ejemplo: `#roll 2d6`")
+        return
+    
     try:
         rolls, limit = map(int, dice.split('d'))
     except (ValueError, TypeError):
-        await ctx.send('Formato tiene que ser NdN!')
+        await ctx.send('⚠️ El formato tiene que ser NdN, por ejemplo: `#roll 4d7')
+        return
+    
+    if rolls <= 0 or limit <= 0:
+        await ctx.send("🚫 Los números deben ser mayores que cero.")
         return
 
     result = ', '.join(str(random.randint(1, limit)) for r in range(rolls))
-    await ctx.send(result)
+    await ctx.send(f"🎯 Resultados: **{result}**")
 
 
 @bot.command(description="Escoge entre varias opciones.")
@@ -103,26 +111,42 @@ async def choose(ctx, *choices: str):
 
 
 @bot.command()
-async def repeat(ctx, times: int, *, content: str = None):
+async def repeat(ctx, times: str = None, *, content: str = None):
     """Repite un mensaje varias veces."""
-    # Validación: si el usuario no escribe texto
-    if content is None:
-        await ctx.send("❗Debes escribir un mensaje para repetir. Ejemplo: `#repeat 3 Hola!`")
+    # Validación: si falta algo
+    if times is None or content is None:
+        await ctx.send("❗ Debes escribir un número y un mensaje. Ejemplo: `#repeat 3 Hola!`")
         return
 
-    # Validación: si el número es menor o igual a 0
+    # Verificar que el número sea válido
+    if not times.isdigit():
+        await ctx.send("⚠️ El primer argumento debe ser un número. Ejemplo: `#repeat 3 Hola!`")
+        return
+
+    times = int(times)
+
+    # Validar el rango del número
     if times <= 0:
         await ctx.send("⚠️ El número de repeticiones debe ser mayor que cero.")
         return
+    if times > 30:
+        await ctx.send("⚠️ Ese número es demasiado alto. Intenta con un valor menor o igual a 30.")
+        return
 
-    # Envía el mensaje las veces indicadas
-    for i in range(times):
+    # Repetir el mensaje
+    for _ in range(times):
         await ctx.send(content)
 
 
 @bot.command()
-async def joined(ctx, member: discord.Member):
-    """Avisa cuando un usuario se unió."""
-    await ctx.send(f'{member.name} joined {discord.utils.format_dt(member.joined_at)}')
+async def joined(ctx, member: discord.Member = None):
+    """Muestra cuándo un usuario se unió al servidor."""
+    # Si no mencionan a nadie, usar al autor del comando
+    if member is None:
+        member = ctx.author
+
+    # Formatear la fecha de ingreso
+    fecha = discord.utils.format_dt(member.joined_at, style='F')
+    await ctx.send(f"📅 **{member.name}** se unió al servidor el {fecha}.")
 
 bot.run(settings["TOKEN"])
