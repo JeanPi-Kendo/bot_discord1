@@ -59,7 +59,7 @@ async def ocho(ctx, *, pregunta: str = None):
         return
 
     # Caso 2: pregunta muy corta
-    if len(pregunta.split()) < 2:
+    if len(pregunta.split()) <= 2:
         await ctx.send("Tu pregunta es muy corta 😅, intenta algo más completo como: `#ocho ¿Voy a aprobar el examen?`")
         return
 
