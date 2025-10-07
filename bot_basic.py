@@ -32,14 +32,18 @@ async def saludo(ctx, *, mensaje: str = None):
         await ctx.send("Recuerda incluir la palabra **hola** en tu saludo 😅")
 
 @bot.command()
-async def add(ctx, left, right):
+async def add(ctx, left: str = None, right: str = None):
     """Suma dos números."""
+    if left is None or right is None:
+        await ctx.send("⚠️ Debes escribir dos números, por ejemplo: `#add 5 7`")
+        return
+
     try:
         left = int(left)
         right = int(right)
         await ctx.send(f"La suma es: {left + right}")
     except ValueError:
-        await ctx.send("⚠️ Debes escribir solo números, por ejemplo: `#add 5 7`")
+        await ctx.send("⚠️ Debes escribir solo números válidos, por ejemplo: `#add 5 7`")
 
 @bot.command()
 async def ocho(ctx, *, pregunta: str = None):
