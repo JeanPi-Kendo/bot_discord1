@@ -21,15 +21,15 @@ async def on_ready():
 
 @bot.command()
 async def saludo(ctx, *, mensaje: str = None):
-    """Saluda al usuario si escribe 'hola'."""
+    """Saluda al usuario si el mensaje contiene la palabra 'hola'."""
     if mensaje is None:
         await ctx.send("Debes escribir un saludo, por ejemplo: `#saludo hola`")
         return
 
-    if mensaje.lower() == "hola":
+    if "hola" in mensaje.lower():
         await ctx.send(f'¡Hola, {ctx.author.name}! 👋')
     else:
-        await ctx.send("Recuerda saludar escribiendo **hola** 😅")
+        await ctx.send("Recuerda incluir la palabra **hola** en tu saludo 😅")
 
 @bot.command()
 async def add(ctx, left, right):
