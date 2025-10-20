@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 from settings import settings
 import random
+import os
+import requests
 
 description = '''An example bot to showcase the discord.ext.commands extension module.'''
 
@@ -13,6 +15,100 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='#', description=description, intents=intents)
 
+memes = {
+    "animales": [
+        "https://i.imgur.com/a1.jpg",
+        "https://i.imgur.com/b2.jpg",
+        "https://i.imgur.com/c3.jpg"
+    ],
+    "gaming": [
+        "https://i.imgur.com/d4.jpg",
+        "https://i.imgur.com/e5.jpg"
+    ],
+    "random": [
+        "https://i.imgur.com/f6.jpg"
+    ]
+}
+
+memes_raros = {
+    "comun": [
+        "https://i.imgur.com/a1.jpg",
+        "https://i.imgur.com/b2.jpg"
+    ],
+    "raro": [
+        "https://i.imgur.com/c3.jpg"
+    ],
+    "epico": [
+        "https://i.imgur.com/d4.jpg"
+    ]
+}
+
+def get_duck_image_url():    
+    url = 'https://random-d.uk/api/random'
+    res = requests.get(url)
+    data = res.json()
+    return data['url']
+
+def get_dog_image_url():    
+    url = "https://random.dog/woof.json"
+    res = requests.get(url)
+    data = res.json()
+    return data['url']
+
+def get_pok_image_url():    
+    pokemon_id = random.randint(1, 151)  # Primeros 151 (como en Kanto)
+    url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_id}"
+    res = requests.get(url)
+    data = res.json()
+    return data["sprites"]["front_default"]
+
+def get_fox_image_url():    
+    url = "https://randomfox.ca/floof/"
+    res = requests.get(url)
+    data = res.json()
+    return data['image']
+
+def get_anime_info(query):
+    url = f"https://kitsu.io/api/edge/anime?filter[text]={query}"
+    res = requests.get(url)
+    data = res.json()
+
+    # Toma el primer resultado
+    anime = data["data"][0]["attributes"]
+
+    title = anime["canonicalTitle"]
+    synopsis = anime["synopsis"]
+    image = anime["posterImage"]["original"]
+
+    return title, synopsis, image
+
+def get_tokyo_anime():
+    url = "https://kitsu.io/api/edge/anime?filter[text]=tokyo"
+    res = requests.get(url)
+    data = res.json()
+    
+    resultados = []
+
+    for item in data["data"]:
+        title = item["attributes"]["canonicalTitle"]
+        if title.lower().startswith("tokyo"):  # 👈 filtro exacto
+            synopsis = item["attributes"]["synopsis"]
+            image = item["attributes"]["posterImage"]["original"]
+            resultados.append((title, synopsis, image))
+    
+    return resultados
+
+def elegir_meme():
+    chance = random.random()
+    if chance < 0.7:
+        categoria = "comun"
+    elif chance < 0.95:
+        categoria = "raro"
+    else:
+        categoria = "epico"
+
+    meme = random.choice(memes_raros[categoria])
+    return categoria, meme
 
 @bot.event
 async def on_ready():
@@ -137,6 +233,94 @@ async def repeat(ctx, times: str = None, *, content: str = None):
     for _ in range(times):
         await ctx.send(content)
 
+@bot.command(name='duck')
+async def duck(ctx):
+    """Envía una imagen de un pato."""
+    image_url = get_duck_image_url()
+    await ctx.send(image_url)
+
+@bot.command(name='dog')
+async def dog(ctx):
+    """Envía una imagen de un perro."""
+    image_url = get_dog_image_url()
+    await ctx.send(image_url)
+
+@bot.command(name='fox')
+async def fox(ctx):
+    """Envía una imagen de un zorro."""
+    image_url = get_fox_image_url()
+    await ctx.send(image_url)
+
+@bot.command(name='pok')
+async def pok(ctx):
+    """Envía una imagen de un Pokémon."""
+    image_url = get_pok_image_url()
+    await ctx.send(image_url)
+
+@bot.command(name='anime')
+async def anime(ctx, *, nombre: str):
+    """Busca un anime por nombre."""
+    try:
+        title, synopsis, image = get_anime_info(nombre)
+        await ctx.send(f"**{title}**\n{synopsis}\n{image}")
+    except Exception as e:
+        await ctx.send("❌ No se encontró ese anime o hubo un error en la búsqueda.")
+        print(e)
+
+@bot.command(name='tokyo')
+async def tokyo(ctx):
+    animes = get_tokyo_anime()
+    if not animes:
+        await ctx.send("❌ No se encontraron animes que empiecen con 'Tokyo'.")
+        return
+
+    for title, synopsis, image in animes:
+        embed = discord.Embed(
+            title=title,
+            description=synopsis[:400] + "...",  # Limitar la sinopsis a 400 caracteres
+        )
+        embed.set_image(url=image)
+        await ctx.send(embed=embed)
+
+@bot.command
+async def animal(ctx, categoria: str = None):
+    if not categoria or categoria.lower() not in memes:
+        categorias = ", ".join(memes.keys())
+        await ctx.send(f"❌ Categoría inválida. Usa una de estas: {categorias}")
+        return
+
+    meme_url = random.choice(memes[categoria.lower()])
+    await ctx.send(meme_url)
+
+@bot.command
+async def rmem(ctx):
+    categoria, meme_url = elegir_meme()
+    emojis = {"comun": "⚪", "raro": "🔵", "epico": "🟣"}
+    await ctx.send(f"{emojis[categoria]} **{categoria.upper()} MEME** {emojis[categoria]}")
+    await ctx.send(meme_url)
+
+@bot.command()
+async def mem(ctx):
+    # Asegúrate de que la carpeta exista
+    folder = 'imagenes'
+    if not os.path.exists(folder):
+        await ctx.send("La carpeta de imágenes no existe 😢")
+        return
+
+    # Obtiene todos los archivos de imagen
+    images = [img for img in os.listdir(folder) if img.endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+    
+    if not images:
+        await ctx.send("No hay imágenes en la carpeta 😢")
+        return
+
+    # Elige una imagen aleatoria
+    img_name = random.choice(images)
+
+    # Abre el archivo correctamente con f-string
+    with open(f'{folder}/{img_name}', 'rb') as f:
+        picture = discord.File(f)
+        await ctx.send(file=picture)
 
 @bot.command()
 async def joined(ctx, member: discord.Member = None):
